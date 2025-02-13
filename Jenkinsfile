@@ -15,15 +15,7 @@ pipeline {
                         credentialsId: 'GITHUB-CREDS'
                 }
             }
-            stage('Build') {
-                steps {
-                    script {
-                        dir('DemoRedisWithSpringBoot') {
-                            bat './mvnw clean install'  // Adjust based on your project setup
-                        }
-                    }
-                }
-            }
+       
 
 //         stage('Checkout') {
 //                 // Step 1: Checkout Latest Codde
