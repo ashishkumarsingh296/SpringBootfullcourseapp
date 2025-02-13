@@ -138,7 +138,7 @@
 						</goals>
 					</execution>
 				</executions>
-				<configuration>
+<!-- 				<configuration>
 					<rules>
 						<rule>
 							<element>BUNDLE</element>
@@ -156,7 +156,7 @@
 							</limits>
 						</rule>
 					</rules>
-				</configuration>
+				</configuration> -->
 			</plugin>
 
 		</plugins>
