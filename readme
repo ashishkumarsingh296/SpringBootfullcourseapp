@@ -1,0 +1,9 @@
+कोड कवर रिपोर्ट कैसे देखें?
+टेस्ट रन कर
+mvn clean test
+रिपोर्ट यहां बनेगी:
+target/site/jacoco/index.html
+ब्राउज़र में खोलें:
+open target/site/jacoco/index.html
+Windows Users:
+start target/site/jacoco/index.html
