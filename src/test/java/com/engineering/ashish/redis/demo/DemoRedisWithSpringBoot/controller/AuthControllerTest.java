@@ -4,16 +4,21 @@ import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity.User;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.cache.UserData;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.InvalidCredentialsException;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.service.AuthService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.dto.UserDTO;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.UserNotFoundException;
 
-import static org.mockito.Mockito.when;
-//to test use commanan in terminal  mvn -Dtest=AuthControllerTest test
+import java.util.Map;
+
+
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
@@ -23,40 +28,38 @@ class AuthControllerTest {
     @InjectMocks
     private AuthController authController;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @Test
     void testRegister() {
-        // Arrange (व्यवस्था): एक नकली उपयोगकर्ता बनाएं
+        // Arrange
         User user = new User();
-        user.setEmail("test@example.com");
+        user.setEmail("test11user@example.com");
         user.setPassword("password");
-        
-        when(authService.register(user)).thenReturn("User registered successfully");
+        when(authService.register(any(User.class))).thenReturn(user);
 
-        // Act (कार्रवाई)
-        String response = authController.register(user).getBody();
+        // Act
+        ResponseEntity<?> response = authController.register(user);
 
-        // Assert (सत्यापन)
-        Mockito.verify(authService).register(user);
-        assert response.equals("User registered successfully");
+        // Assert
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody() instanceof UserDTO);
+        verify(authService).register(user);
     }
 
     @Test
     void testLogin_Success() {
         // Arrange
+        String token = "mocked-jwt-token";
         User user = new User();
-        user.setEmail("test@example.com");
+        user.setEmail("test11user@example.com");
         user.setPassword("password");
-
-        when(authService.login(user.getEmail(), user.getPassword())).thenReturn("mocked-jwt-token");
+        when(authService.login(user.getEmail(), user.getPassword())).thenReturn(token);
 
         // Act
-        String response = (String) authController.login(user).getBody();
+        ResponseEntity<?> response = authController.login(user);
 
         // Assert
-        Mockito.verify(authService).login(user.getEmail(), user.getPassword());
-        assert response.equals("mocked-jwt-token");
+        assertEquals(token, response.getBody());
+        verify(authService).login(user.getEmail(), user.getPassword());
     }
 
     @Test
@@ -66,17 +69,24 @@ class AuthControllerTest {
         user.setEmail("wrong@example.com");
         user.setPassword("wrongpassword");
 
-        when(authService.login(user.getEmail(), user.getPassword())).thenThrow(new InvalidCredentialsException("Invalid Credentials"));
+        when(authService.login(user.getEmail(), user.getPassword()))
+                .thenThrow(new InvalidCredentialsException("Invalid Credentials"));
 
-        // Act & Assert
-        try {
-            authController.login(user);
-        } catch (InvalidCredentialsException e) {
-            assert e.getMessage().equals("Invalid Credentials");
-        }
+        // Act
+        ResponseEntity<?> response = authController.login(user);
 
-        Mockito.verify(authService).login(user.getEmail(), user.getPassword());
+        // Assert
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody() instanceof Map);
+
+        Map<?, ?> responseBody = (Map<?, ?>) response.getBody();
+        assertEquals("Unauthorized", responseBody.get("error"));
+        assertEquals("Invalid Credentials", responseBody.get("message"));
+
+        verify(authService).login(user.getEmail(), user.getPassword());
     }
+
 
     @Test
     void testGetUserData_Success() {
@@ -85,65 +95,22 @@ class AuthControllerTest {
         when(authService.getUserDataFromCache("test@example.com")).thenReturn(userData);
 
         // Act
-        UserData response = (UserData) authController.getUserData("test@example.com").getBody();
+        ResponseEntity<?> response = authController.getUserData("test@example.com");
 
         // Assert
-        Mockito.verify(authService).getUserDataFromCache("test@example.com");
-        assert response != null;
-        assert response.getEmail().equals("test@example.com");
+        assertNotNull(response.getBody());
+        assertEquals(userData, response.getBody());
+        verify(authService).getUserDataFromCache("test@example.com");
     }
 
-    @Test
-    void testRegister_NullUser() {
-        // Act & Assert
-        try {
-            authController.register(null);
-        } catch (Exception e) {
-            assert e instanceof NullPointerException;
-        }
-    }
-    @Test
-    void testLogin_NullEmail() {
-        // Arrange
-        User user = new User();
-        user.setEmail(null);
-        user.setPassword("password");
-
-        // Act & Assert
-        try {
-            authController.login(user);
-        } catch (Exception e) {
-            assert e instanceof NullPointerException;
-        }
-    }
-
-    @Test
-    void testLogin_NullPassword() {
-        // Arrange
-        User user = new User();
-        user.setEmail("test@example.com");
-        user.setPassword(null);
-
-        // Act & Assert
-        try {
-            authController.login(user);
-        } catch (Exception e) {
-            assert e instanceof NullPointerException;
-        }
-    }
     @Test
     void testGetUserData_UserNotFound() {
         // Arrange
         when(authService.getUserDataFromCache("notfound@example.com")).thenReturn(null);
 
         // Act & Assert
-        try {
-            authController.getUserData("notfound@example.com");
-        } catch (Exception e) {
-            assert e.getMessage().contains("User with email: notfound@example.com does not exist in cache.");
-        }
-
-        Mockito.verify(authService).getUserDataFromCache("notfound@example.com");
+        Exception exception = assertThrows(UserNotFoundException.class, () -> authController.getUserData("notfound@example.com"));
+        assertTrue(exception.getMessage().contains("User with email: notfound@example.com does not exist in cache."));
+        verify(authService).getUserDataFromCache("notfound@example.com");
     }
-
 }

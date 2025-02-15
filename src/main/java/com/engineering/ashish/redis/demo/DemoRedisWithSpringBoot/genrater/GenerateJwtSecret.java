@@ -1,4 +1,4 @@
-package com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity;
+package com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.genrater;
 
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;

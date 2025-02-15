@@ -7,3 +7,132 @@ target/site/jacoco/index.html
 open target/site/jacoco/index.html
 Windows Users:
 start target/site/jacoco/index.html
+
+
+
+Spring Boot Redis Rate Limiting Authentication App
+
+📌 Overview
+
+This project is a Spring Boot 3.4.2 application implementing authentication, caching, and rate limiting with Redis. It provides user registration, login with JWT authentication, and API key-based authorization with rate limiting.
+
+🛠️ Technologies Used
+
+Spring Boot 3.4.2 - Core framework
+
+Spring Security - Authentication & JWT-based authorization
+
+Spring Data JPA - ORM & database interaction
+
+MySQL - Database for storing users & API keys
+
+Redis - Used for caching user data and rate limiting
+
+Kafka - For event-driven architecture
+
+JUnit & Mockito - Unit testing
+
+Lombok - Reducing boilerplate code
+
+Docker - Containerization
+
+📌 Features Implemented
+
+🔑 Authentication & Authorization
+
+User Registration (/auth/register) - Registers a user and generates an API key.
+
+User Login (/auth/login) - Authenticates users with JWT.
+
+API Key Support - Users can access endpoints using API keys.
+
+🚀 Rate Limiting
+
+Implemented using Redis to throttle requests per IP.
+
+Ensures fair usage and prevents API abuse.
+
+🗂️ Caching with Redis
+
+User data is cached in Redis to reduce DB call (queries).
+
+Faster response times for frequently accessed data.
+
+🛡️ JWT-based Security
+
+Access tokens are issued on login.
+
+Authorization headers required for secure endpoints.
+
+🚀 API Endpoints
+
+🔑 Authentication APIs
+
+Method
+
+Endpoint
+
+Description
+
+POST
+
+/auth/register
+
+Register a new user
+
+POST
+
+/auth/login
+
+Authenticate and get JWT token
+
+GET
+
+/auth/user-data/{email}
+
+Get user details from Redis
+
+📌 Rate Limiting
+
+Method
+
+Endpoint
+
+Description
+
+ANY
+
+/*
+
+Rate limits requests based on IP
+
+🔍 Unit Testing with Mockito
+
+AuthControllerTest verifies user registration & login.
+
+RateLimitFilterTest ensures API rate limiting is enforced.
+
+Mocking AuthService to isolate controller behavior.
+
+📦 Deployment
+
+Dockerized application
+
+Redis & MySQL running in Docker containers
+
+Kafka integrated for messaging
+
+🎯 Future Enhancements
+
+📩 Kafka Integration
+
+Events (such as user registration) are published to Kafka topics.
+
+Implement refresh tokens for JWT.
+
+Add role-based access control (RBAC).
+
+Enhance logging & monitoring with Prometheus & Grafana.
+
+This documentation provides a structured view of the app’s features and technologies. 🚀
+

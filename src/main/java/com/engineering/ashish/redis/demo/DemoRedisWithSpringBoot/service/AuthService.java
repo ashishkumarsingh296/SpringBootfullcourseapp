@@ -1,12 +1,16 @@
 package com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.service;
 
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity.ApiKey;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity.User;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.genrater.ApiKeyGenerator;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.cache.UserData;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.enums.UserType;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.InvalidCredentialsException;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.UserAlreadyExistsException;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.repository.APIKeyRepository;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.repository.UserRepository;
 
-import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.security.JwtUtil;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.util.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +19,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.Optional;
+
 
 @Service
 public class AuthService {
@@ -23,6 +30,8 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    APIKeyRepository apiKeyRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -33,26 +42,39 @@ public class AuthService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public String register(User userRequest) {
+    public User register(User userRequest) {
+        User newUser=null;
         try {
             if (userRepository.findByEmail(userRequest.getEmail()).isPresent()) {
                 logger.warn("User already exists: {}", userRequest.getEmail());
                 throw new UserAlreadyExistsException("User with email " + userRequest.getEmail() + " already exists.");
             }
+            String generatedApiKey = ApiKeyGenerator.generateApiKey();
+            newUser = new User();
+            newUser.setEmail(userRequest.getEmail());
+            newUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+            newUser.setRole(userRequest.getRole());
+            newUser.setApiKey(generatedApiKey);
+            newUser.setUserType(UserType.FREE);
+            userRepository.save(newUser);
 
-            User user = new User();
-            user.setEmail(userRequest.getEmail());
-            user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-            user.setRole(userRequest.getRole());
-            userRepository.save(user);
+            // Generate and store API Key
+            ApiKey apiKey = ApiKey.builder()
+                    .apiKey(generatedApiKey) // Generate API key
+                    .user(newUser)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            apiKeyRepository.save(apiKey);
 
             logger.info("User registered successfully: {}", userRequest.getEmail());
-            return "User registered successfully";
+
 
         } catch (Exception e) {
             logger.error("Error registering user: {}", userRequest.getEmail(), e);
             throw new RuntimeException("An unexpected error occurred during registration.");
         }
+        return newUser;
     }
 
     public String login(String email, String password) {

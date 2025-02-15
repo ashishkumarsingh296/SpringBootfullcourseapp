@@ -1,7 +1,9 @@
 package com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.controller;
 
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity.ApiKey;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.Entity.User;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.cache.UserData;
+import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.dto.UserDTO;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.InvalidCredentialsException;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.exceptionhandling.UserNotFoundException;
 import com.engineering.ashish.redis.demo.DemoRedisWithSpringBoot.service.AuthService;
@@ -11,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,9 +24,17 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User request) {
-        String response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<?> register(@RequestBody User request) {
+        User user = authService.register(request);
+
+         UserDTO response = UserDTO.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .userType(user.getUserType())
+                .apiKey(user.getApiKey())  // Include API key in response
+                .build();
+        return  ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
