@@ -21,6 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -33,8 +35,18 @@ public class AuthService {
     @Autowired
     APIKeyRepository apiKeyRepository;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+//    @Autowired
+//    private JwtUtil jwtUtil;
+
+//    private final RefreshTokenService refreshTokenService;
+
+    private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
+
+    public AuthService(JwtUtil jwtUtil, RefreshTokenService refreshTokenService) {
+        this.jwtUtil = jwtUtil;
+        this.refreshTokenService = refreshTokenService;
+    }
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -77,35 +89,48 @@ public class AuthService {
         return newUser;
     }
 
-    public String login(String email, String password) {
-        try {
-            // Check cache for user data
-            UserData cachedUserData = getUserDataFromCache(email);
-            if (cachedUserData != null) {
-                return jwtUtil.generateToken(email);
-            }
+    public Map<String, String> login(String email, String password) {
+        // Check if user data is cached
+        UserData cachedUserData = getUserDataFromCache(email);
 
-            // If not found in cache, validate credentials from database
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
-                User user = userOpt.get();
-                UserData userData = new UserData(user.getEmail(), user.getRole().name());
-                redisTemplate.opsForValue().set(USER_DATA_KEY + email, userData);
-                return jwtUtil.generateToken(email);
-            }
+        if (cachedUserData != null) {
+            // If user is found in cache, generate tokens and return
+            String accessToken = jwtUtil.generateToken(email);
+            String refreshToken = jwtUtil.generateRefreshToken(email);
+            refreshTokenService.storeRefreshToken(email, refreshToken);
 
-            // Throw custom exception for invalid credentials
-            throw new InvalidCredentialsException("Invalid email or password.");
-        } catch (InvalidCredentialsException e) {
-            // Handle invalid credentials error (Already caught)
-            logger.error("Invalid credentials for user: " + email, e);
-            throw e; // Re-throw to let the controller handle it (401 Unauthorized)
-        } catch (Exception e) {
-            // Catch all other unexpected errors
-            logger.error("Error during login for user: " + email, e);
-            throw new RuntimeException("An unexpected error occurred during login."); // Let the GlobalExceptionHandler catch it
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+            return tokens;
         }
+
+        // Validate user credentials from the database
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            User user = userOpt.get();
+
+            // Store user data in Redis cache
+            UserData userData = new UserData(user.getEmail(), user.getRole().name());
+            redisTemplate.opsForValue().set(USER_DATA_KEY + email, userData);
+
+            // Generate JWT tokens
+            String accessToken = jwtUtil.generateToken(email);
+            String refreshToken = jwtUtil.generateRefreshToken(email);
+            refreshTokenService.storeRefreshToken(email, refreshToken);
+
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("accessToken", accessToken);
+            tokens.put("refreshToken", refreshToken);
+            return tokens;
+        }
+
+        // If authentication fails, throw a custom exception
+        logger.error("Invalid login attempt for email: {}", email);
+        throw new InvalidCredentialsException("Invalid email or password.");
     }
+
 
 
     // Method to get user data from Redis cache
@@ -128,5 +153,19 @@ public class AuthService {
                 System.out.println("Updated user data for: " + user.getEmail());
             }
         }
+    }
+
+    public String refreshAccessToken(String email, String refreshToken) {
+        String storedRefreshToken = refreshTokenService.getRefreshToken(email);
+
+        if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
+            throw new InvalidCredentialsException("Invalid or expired refresh token.");
+        }
+
+        return jwtUtil.generateToken(email);
+    }
+
+    public void logout(String email) {
+        refreshTokenService.deleteRefreshToken(email);
     }
 }

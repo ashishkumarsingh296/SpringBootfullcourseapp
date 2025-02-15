@@ -122,13 +122,14 @@ Redis & MySQL running in Docker containers
 
 Kafka integrated for messaging
 
+Implemented refresh tokens for JWT.
+Imlemeted Logback witj SLf4j for loging info
+
 🎯 Future Enhancements
 
 📩 Kafka Integration
 
 Events (such as user registration) are published to Kafka topics.
-
-Implement refresh tokens for JWT.
 
 Add role-based access control (RBAC).
 

@@ -28,25 +28,6 @@ public class SecurityConfig {
     @Autowired
     private RateLimitFilter rateLimitFilter;
 
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/auth/**", "/public/**").permitAll()  // Public endpoints
-//                        .requestMatchers("/admin/**").hasRole("ADMIN") // JWT Auth for Admin
-//                        .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN") // JWT Auth for Users
-//                        .requestMatchers("/external/**").permitAll()  // API Key-based authentication
-//                        .anyRequest().authenticated()
-//                )
-//                // Apply API Key authentication first for external requests
-//                .addFilterBefore(apiKeyAuthFilter, JwtAuthFilter.class)
-//                // Apply JWT authentication for other requests
-//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
